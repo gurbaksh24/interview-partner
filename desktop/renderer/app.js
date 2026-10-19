@@ -120,20 +120,37 @@
 
   // ---------- backend ----------
 
+  /** Polls /api/health: fast while offline so the app recovers as soon as the backend starts. */
   async function checkBackend() {
+    clearTimeout(state.healthTimer);
+    let online = false;
     try {
       const res = await fetch(`${state.backendUrl}/api/health`);
       const info = await res.json();
+      online = true;
       setStatus('backend-status', info.stt ? 'Backend ready' : 'Backend ready (no voice: type answers)', 'ok');
-      $('record-btn').disabled = !info.stt;
+      if (!(state.mic && state.mic.active)) $('record-btn').disabled = !info.stt;
     } catch {
-      setStatus('backend-status', `Backend offline at ${state.backendUrl}`, 'bad');
+      setStatus('backend-status', `Backend offline at ${state.backendUrl}. Start it with: python app.py`, 'bad');
+      if (!(state.mic && state.mic.active)) $('record-btn').disabled = true;
+    }
+    $('start-btn').disabled = !online;
+    state.healthTimer = setTimeout(checkBackend, online ? 15000 : 3000);
+  }
+
+  /** fetch() that turns the browser's bare "Failed to fetch" into an actionable message. */
+  async function backendFetch(path, options) {
+    try {
+      return await fetch(`${state.backendUrl}${path}`, options);
+    } catch {
+      checkBackend();
+      throw new Error(`Can't reach the backend at ${state.backendUrl}. Is it running? (python app.py)`);
     }
   }
 
   /** Streams /api/chat. onText(fullTextSoFar). Resolves with the full text. */
   async function streamChat(action, onText) {
-    const res = await fetch(`${state.backendUrl}/api/chat`, {
+    const res = await backendFetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...state.setup, history: state.history, action }),

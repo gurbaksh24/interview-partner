@@ -14,7 +14,12 @@ class MicTranscriber {
 
   /** onText(fullText) is called whenever the running transcript changes. */
   async start(onText, onError) {
-    const res = await fetch(`${this.backendUrl}/api/stt-token`);
+    let res;
+    try {
+      res = await fetch(`${this.backendUrl}/api/stt-token`);
+    } catch {
+      throw new Error(`Can't reach the backend at ${this.backendUrl}. Is it running? (python app.py)`);
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       throw new Error(body.detail || `Speech-to-text unavailable (${res.status})`);

@@ -71,12 +71,18 @@ async def health():
 async def stt_token():
     if not ASSEMBLYAI_API_KEY:
         raise HTTPException(503, "Speech-to-text is not configured (set ASSEMBLYAI_API_KEY).")
-    async with httpx.AsyncClient(timeout=10) as http:
-        resp = await http.get(
-            "https://streaming.assemblyai.com/v3/token",
-            params={"expires_in_seconds": 60, "max_session_duration_seconds": 3600},
-            headers={"Authorization": ASSEMBLYAI_API_KEY},
-        )
+    try:
+        async with httpx.AsyncClient(timeout=10) as http:
+            resp = await http.get(
+                "https://streaming.assemblyai.com/v3/token",
+                params={"expires_in_seconds": 60, "max_session_duration_seconds": 3600},
+                headers={"Authorization": ASSEMBLYAI_API_KEY},
+            )
+    except httpx.HTTPError:
+        # An unhandled exception would become a 500 without CORS headers,
+        # which the renderer can only report as "Failed to fetch".
+        log.exception("AssemblyAI token request failed")
+        raise HTTPException(502, "Could not reach the speech-to-text service.")
     if resp.status_code != 200:
         log.warning("AssemblyAI token request failed: %s %s", resp.status_code, resp.text)
         raise HTTPException(502, "Could not get a speech-to-text token.")
