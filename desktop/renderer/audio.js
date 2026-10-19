@@ -12,8 +12,12 @@ class MicTranscriber {
     return this.ws !== null;
   }
 
-  /** onText(fullText) is called whenever the running transcript changes. */
-  async start(onText, onError) {
+  /**
+   * onText(fullText) is called whenever the running transcript changes.
+   * Options: deviceId (mic to use; default device if empty), onLevel(0..1) per 50 ms chunk,
+   * onSilent() once if the mic delivers ~2 s of pure digital silence (a virtual or disconnected mic).
+   */
+  async start(onText, onError, { deviceId = '', onLevel = () => {}, onSilent = () => {} } = {}) {
     let res;
     try {
       res = await fetch(`${this.backendUrl}/api/stt-token`);
@@ -27,9 +31,9 @@ class MicTranscriber {
     const { ws_url: wsUrl, sample_rate: sampleRate } = await res.json();
 
     this.turns.clear();
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-    });
+    const audio = { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true };
+    if (deviceId) audio.deviceId = { exact: deviceId };
+    this.stream = await navigator.mediaDevices.getUserMedia({ audio });
     this.ctx = new AudioContext({ sampleRate });
     await this.ctx.audioWorklet.addModule('pcm-worklet.js');
     const source = this.ctx.createMediaStreamSource(this.stream);
@@ -39,7 +43,19 @@ class MicTranscriber {
     ws.binaryType = 'arraybuffer';
     this.ws = ws;
 
+    const SILENT_CHUNKS = 40; // 2 s of 50 ms chunks
+    let zeroChunks = 0;
     node.port.onmessage = (e) => {
+      const samples = new Int16Array(e.data);
+      let sumSquares = 0;
+      let peak = 0;
+      for (let i = 0; i < samples.length; i++) {
+        sumSquares += samples[i] * samples[i];
+        peak = Math.max(peak, Math.abs(samples[i]));
+      }
+      onLevel(Math.min(1, (Math.sqrt(sumSquares / samples.length) / 32768) * 8));
+      zeroChunks = peak === 0 ? zeroChunks + 1 : -Infinity; // any real signal disarms the warning
+      if (zeroChunks === SILENT_CHUNKS) onSilent();
       if (ws.readyState === WebSocket.OPEN) ws.send(e.data);
     };
     source.connect(node);
@@ -62,6 +78,12 @@ class MicTranscriber {
     ws.onclose = (e) => {
       if (this.ws === ws && e.code !== 1000) onError(new Error(`Speech-to-text closed (${e.code}) ${e.reason || ''}`));
     };
+  }
+
+  /** Label of the mic actually in use (empty when not recording). */
+  get deviceLabel() {
+    const track = this.stream && this.stream.getAudioTracks()[0];
+    return track ? track.label : '';
   }
 
   text() {

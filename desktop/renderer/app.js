@@ -2,6 +2,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = 'interview-partner:setup';
+  const MIC_KEY = 'interview-partner:mic';
 
   const state = {
     backendUrl: 'http://127.0.0.1:8787',
@@ -288,7 +289,10 @@
         btn.disabled = false;
         btn.classList.remove('recording');
         btn.textContent = '● Record';
-        setStatus('composer-status', '');
+        $('mic-select').disabled = false;
+        $('mic-level').style.width = '0';
+        // Keep a silent-mic warning visible after stopping; otherwise clear "Finishing transcript…".
+        setStatus('composer-status', state.micWarning || '', state.micWarning ? 'bad' : undefined);
       }
       return;
     }
@@ -297,6 +301,7 @@
     const existing = $('answer-input').value.trim();
     state.answerPrefix = existing ? existing + ' ' : '';
     btn.disabled = true;
+    state.micWarning = false;
     try {
       await state.mic.start(
         (text) => {
@@ -306,16 +311,54 @@
           setStatus('composer-status', err.message, 'bad');
           if (state.mic.active) toggleRecording();
         },
+        {
+          deviceId: $('mic-select').value,
+          onLevel: (level) => {
+            $('mic-level').style.width = `${Math.round(level * 100)}%`;
+          },
+          onSilent: () => {
+            state.micWarning = `No sound from "${state.mic.deviceLabel || 'this microphone'}". Pick another microphone.`;
+            setStatus('composer-status', state.micWarning, 'bad');
+          },
+        },
       );
       btn.classList.add('recording');
       btn.textContent = '■ Stop';
-      setStatus('composer-status', 'Listening…');
+      $('mic-select').disabled = true;
+      setStatus('composer-status', `Listening on ${state.mic.deviceLabel || 'microphone'}…`);
+      refreshMics(); // labels become available once mic permission is granted
     } catch (err) {
       await state.mic.stop().catch(() => {});
-      setStatus('composer-status', err.message, 'bad');
+      const missing = err.name === 'OverconstrainedError' || err.name === 'NotFoundError';
+      setStatus('composer-status', missing ? 'That microphone is not available. Pick another one.' : err.message, 'bad');
+      if (missing) refreshMics();
     } finally {
       btn.disabled = false;
     }
+  }
+
+  /** Fills the microphone picker, keeping the saved choice when that device is still present. */
+  async function refreshMics() {
+    let devices = [];
+    try {
+      devices = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
+    } catch {
+      return;
+    }
+    const select = $('mic-select');
+    const wanted = select.value || load(MIC_KEY) || '';
+    const options = [el('option', '', 'System default microphone')];
+    options[0].value = '';
+    devices
+      // "default" and "communications" are Windows aliases for devices already in the list.
+      .filter((d) => d.deviceId && d.deviceId !== 'default' && d.deviceId !== 'communications')
+      .forEach((d, i) => {
+        const option = el('option', '', d.label || `Microphone ${i + 1}`);
+        option.value = d.deviceId;
+        options.push(option);
+      });
+    select.replaceChildren(...options);
+    select.value = options.some((o) => o.value === wanted) ? wanted : '';
   }
 
   // ---------- wiring ----------
@@ -349,6 +392,13 @@
     $('submit-btn').addEventListener('click', submitAnswer);
     $('end-btn').addEventListener('click', endInterview);
     $('record-btn').addEventListener('click', toggleRecording);
+    $('mic-select').addEventListener('change', (e) => {
+      store(MIC_KEY, e.target.value);
+      state.micWarning = false;
+      setStatus('composer-status', '');
+    });
+    navigator.mediaDevices.addEventListener('devicechange', refreshMics);
+    refreshMics();
     $('restart-btn').addEventListener('click', () => show('setup-view'));
     $('ontop-toggle').addEventListener('change', (e) => window.partner && window.partner.setAlwaysOnTop(e.target.checked));
     document.addEventListener('keydown', (e) => {

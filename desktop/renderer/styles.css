@@ -312,3 +312,31 @@ code {
   border-radius: 4px;
   padding: 0 4px;
 }
+
+select {
+  font: inherit;
+  font-size: 12px;
+  max-width: 220px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.meter {
+  width: 60px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--good);
+  transition: width 60ms linear;
+}

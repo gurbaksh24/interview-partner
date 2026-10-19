@@ -57,6 +57,10 @@
           <textarea id="answer-input" placeholder="Press Record and answer out loud, or type your answer. Ctrl+Enter to submit."></textarea>
           <div class="composer-row">
             <button id="record-btn" class="record">● Record</button>
+            <select id="mic-select" title="Microphone" aria-label="Microphone">
+              <option value="">System default microphone</option>
+            </select>
+            <span class="meter" title="Microphone level"><span id="mic-level"></span></span>
             <span id="composer-status" class="status"></span>
             <span class="spacer"></span>
             <button id="end-btn" class="secondary">End &amp; get report</button>
