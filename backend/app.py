@@ -33,7 +33,11 @@ ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY", "")
 ASSEMBLYAI_SPEECH_MODEL = os.getenv("ASSEMBLYAI_SPEECH_MODEL", "universal-3-6-pro")
 STT_SAMPLE_RATE = 16000
 
-client = anthropic.AsyncAnthropic()
+# Keys that aren't scoped to a workspace must name one on every request.
+ANTHROPIC_WORKSPACE_ID = os.getenv("ANTHROPIC_WORKSPACE_ID", "")
+client = anthropic.AsyncAnthropic(
+    default_headers={"anthropic-workspace-id": ANTHROPIC_WORKSPACE_ID} if ANTHROPIC_WORKSPACE_ID else None
+)
 app = FastAPI(title="Interview Partner")
 
 # The Electron renderer is loaded from file://, which sends Origin: null.

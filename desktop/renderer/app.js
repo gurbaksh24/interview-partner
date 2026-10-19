@@ -68,7 +68,9 @@
     const { feedback, question } = parseInterviewer(text);
     if (feedback) {
       const box = el('div', 'feedback');
-      box.append(el('div', 'feedback-title', 'Feedback on your answer'), el('div', '', feedback));
+      const body = el('div', 'feedback-body');
+      renderMarkdown(body, feedback);
+      box.append(el('div', 'feedback-title', 'Feedback on your answer'), body);
       container.append(box);
     }
     container.append(el('div', 'question', question || '…'));
@@ -83,13 +85,15 @@
     return node;
   }
 
-  /** Minimal, escaped Markdown for the report: headings, bullets, bold, paragraphs. */
+  /** Minimal, escaped Markdown: headings, bullets, paragraphs, **bold**, *italic*, `code`. */
   function renderMarkdown(target, md) {
     target.replaceChildren();
     let list = null;
     const inline = (parent, line) => {
-      line.split(/(\*\*[^*]+\*\*)/g).forEach((part) => {
-        if (part.startsWith('**') && part.endsWith('**') && part.length > 4) parent.append(el('strong', '', part.slice(2, -2)));
+      line.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*\s][^*]*\*)/g).forEach((part) => {
+        if (/^\*\*[^*]+\*\*$/.test(part)) parent.append(el('strong', '', part.slice(2, -2)));
+        else if (/^`[^`]+`$/.test(part)) parent.append(el('code', '', part.slice(1, -1)));
+        else if (/^\*[^*\s][^*]*\*$/.test(part)) parent.append(el('em', '', part.slice(1, -1)));
         else if (part) parent.append(document.createTextNode(part));
       });
     };
