@@ -24,7 +24,7 @@ backend/  FastAPI: mints short-lived STT tokens, streams Claude's turns over SSE
   allowlisted IPC with sender-frame checks, mic-only permissions, navigation blocked, and the
   packaged binary's fuses flipped (RunAsNode, `NODE_OPTIONS`, `--inspect` off; ASAR integrity on).
 
-## Run it
+## Setup (once)
 
 Backend (Python 3.11+):
 
@@ -32,9 +32,16 @@ Backend (Python 3.11+):
 cd backend
 python -m venv .venv
 .venv/Scripts/python -m pip install -r requirements.txt   # macOS/Linux: .venv/bin/python
-cp .env.example .env   # add ANTHROPIC_API_KEY, and ASSEMBLYAI_API_KEY for voice
-.venv/Scripts/python app.py   # http://127.0.0.1:8787
+cp .env.example .env
 ```
+
+Then edit `backend/.env` (never `.env.example`, which is committed to git):
+
+- `ANTHROPIC_API_KEY`: required.
+- `ANTHROPIC_WORKSPACE_ID`: only if your key isn't scoped to a workspace. Requests fail with a 400
+  that says so; the ID (`wrkspc_…`) is under Settings → Workspaces in the Claude Console.
+- `ASSEMBLYAI_API_KEY`: optional. Without it the app still works; Record is disabled and you type
+  your answers.
 
 Desktop app (Node 20+):
 
@@ -42,24 +49,51 @@ Desktop app (Node 20+):
 cd desktop
 npm install
 npm install-scripts approve electron   # npm 12+ blocks Electron's binary download by default
+```
+
+## Run it
+
+```bash
+cd desktop
 npm start
 ```
 
-Without `ASSEMBLYAI_API_KEY` the app still works; Record is disabled and you type your answers.
-Point the app at another backend with `INTERVIEW_BACKEND_URL`.
+The app starts the backend for you if it isn't already running, and stops it again when you quit.
+Its output goes to `backend.log` in the app's data folder (`%APPDATA%\Interview Partner` on
+Windows). To watch the backend's logs live, run it yourself first and the app will use that one:
+
+```bash
+cd backend
+.venv/Scripts/python app.py   # http://127.0.0.1:8787
+```
+
+Set `INTERVIEW_AUTOSTART_BACKEND=0` to turn auto-start off, or `INTERVIEW_BACKEND_URL` to use a
+backend elsewhere (auto-start only applies to a local URL).
 
 Package a Windows build with `npm run dist` (or `npm run pack` for an unpacked folder).
 
 ## Using it
 
 1. Paste (or load from a `.txt`/`.md` file) your resume and the job description, optionally a role.
-2. **Record**, answer out loud, **Stop**. Edit the transcript if needed, then **Ctrl+Enter**.
-3. Read the feedback, answer the next question. **End & get report** when you're done.
+2. Pick your microphone in the dropdown next to **Record** (remembered between sessions).
+3. **Record**, answer out loud, **Stop**. Edit the transcript if needed, then **Ctrl+Enter**.
+4. Read the feedback, answer the next question. **End & get report** when you're done.
+
+## Troubleshooting
+
+- **"Waiting for backend…" doesn't go away.** Check `backend.log` (see above). The usual causes
+  are a missing `backend/.venv` (run the setup) or a missing or wrong key in `backend/.env`.
+- **Recording shows nothing.** Watch the level meter next to the microphone dropdown while you
+  speak. If it doesn't move, pick another microphone. Virtual mics such as Camo send pure silence
+  when their phone app isn't connected, and the app warns about that after 2 seconds.
+- **"Model API error (400)".** The backend log has the API's reason. A key that isn't scoped to a
+  workspace needs `ANTHROPIC_WORKSPACE_ID`.
 
 ## Configuration (`backend/.env`)
 
 | Variable | Default | |
 |---|---|---|
+| `ANTHROPIC_WORKSPACE_ID` | (unset) | Only for keys not scoped to a workspace |
 | `INTERVIEW_MODEL` | `claude-opus-5-5` | |
 | `INTERVIEW_TURN_EFFORT` | `low` | Interview turns favour latency |
 | `INTERVIEW_REPORT_EFFORT` | `medium` | The final report gets more thought |

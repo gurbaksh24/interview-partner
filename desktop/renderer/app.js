@@ -132,7 +132,7 @@
       setStatus('backend-status', info.stt ? 'Backend ready' : 'Backend ready (no voice: type answers)', 'ok');
       if (!(state.mic && state.mic.active)) $('record-btn').disabled = !info.stt;
     } catch {
-      setStatus('backend-status', `Backend offline at ${state.backendUrl}. Start it with: python app.py`, 'bad');
+      setStatus('backend-status', `Waiting for backend at ${state.backendUrl}…`, 'bad');
       if (!(state.mic && state.mic.active)) $('record-btn').disabled = true;
     }
     $('start-btn').disabled = !online;
