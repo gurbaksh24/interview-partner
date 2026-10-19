@@ -1,0 +1,34 @@
+{
+  "name": "interview-partner",
+  "productName": "Interview Partner",
+  "version": "0.1.0",
+  "description": "Practice interviews with Claude as the interviewer.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "dev.interviewpartner.app",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**"
+    ],
+    "asar": true,
+    "afterPack": "./scripts/fuses.js",
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "devDependencies": {
+    "@electron/fuses": "^1.8.0",
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "allowScripts": {
+    "electron@38.8.6": true
+  }
+}

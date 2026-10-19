@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* https: wss://streaming.assemblyai.com"
+    />
+    <title>Interview Partner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Interview Partner</h1>
+      <div class="topbar-actions">
+        <label class="toggle"><input type="checkbox" id="speak-toggle" checked /> Read questions aloud</label>
+        <label class="toggle"><input type="checkbox" id="ontop-toggle" /> Always on top</label>
+        <span id="backend-status" class="status">Checking backend…</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Setup -->
+      <section id="setup-view" class="view">
+        <div class="setup-grid">
+          <div class="field full">
+            <label for="role-input">Target role (optional)</label>
+            <input id="role-input" type="text" placeholder="e.g. Senior Backend Engineer" maxlength="200" />
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="resume-input">Your resume</label>
+              <button type="button" class="link" data-load-into="resume-input">Load .txt/.md file</button>
+            </div>
+            <textarea id="resume-input" placeholder="Paste your resume as plain text"></textarea>
+          </div>
+          <div class="field">
+            <div class="label-row">
+              <label for="jd-input">Job description</label>
+              <button type="button" class="link" data-load-into="jd-input">Load .txt/.md file</button>
+            </div>
+            <textarea id="jd-input" placeholder="Paste the job description"></textarea>
+          </div>
+        </div>
+        <input id="file-picker" type="file" accept=".txt,.md,text/plain,text/markdown" hidden />
+        <div class="actions">
+          <span id="setup-error" class="error" role="alert"></span>
+          <button id="start-btn" class="primary">Start practice interview</button>
+        </div>
+      </section>
+
+      <!-- Interview -->
+      <section id="interview-view" class="view" hidden>
+        <div id="log" class="log" aria-live="polite"></div>
+
+        <div class="composer">
+          <textarea id="answer-input" placeholder="Press Record and answer out loud, or type your answer. Ctrl+Enter to submit."></textarea>
+          <div class="composer-row">
+            <button id="record-btn" class="record">● Record</button>
+            <span id="composer-status" class="status"></span>
+            <span class="spacer"></span>
+            <button id="end-btn" class="secondary">End &amp; get report</button>
+            <button id="submit-btn" class="primary">Submit answer <kbd>Ctrl+Enter</kbd></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Report -->
+      <section id="report-view" class="view" hidden>
+        <article id="report" class="report"></article>
+        <div class="actions">
+          <button id="restart-btn" class="primary">New interview</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="audio.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
